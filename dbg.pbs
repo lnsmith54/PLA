@@ -1,0 +1,66 @@
+#!/bin/bash
+#PBS -l walltime=12:00:00
+#PBS -l select=1:ncpus=24:mpiprocs=24:ngpus=4:powerai=on
+#PBS -l place=scatter:excl
+#PBS -N Debug
+#PBS -j oe
+#PBS -V
+#PBS -q standard
+#PBS -A MHPCC96650NRL
+
+module unload anaconda3/5.2.0
+module unload anaconda3/2019.07
+module load anaconda3/5.2.0
+module load anaconda3/2019.07
+module load tensorflow/1.14.0
+
+cd $PBS_O_WORKDIR
+export ML_DATA="./data"
+export PYTHONPATH=$PYTHONPATH:$PWD
+
+date
+
+python --version
+#echo "Output to folder frost"
+#echo "stl10.1@100-1Iter1024U7CL4C0.95WD8e-4WU2Wclr1BS32LR0.06M0.9T1Ad.d.dB0D0BF4"
+CUDA_VISIBLE_DEVICES=0 python pla.py --train_kimg 1024 --uratio 7 --confidence 0.95 --wd 5e-4 --wu 2 --batch 32 --lr 0.06 --arch resnet --filters 32 --scales 3 --repeat 4 --dataset=cifar10.1@40-80 --train_dir experiments/ROSS/dbg0 --augment d.d.d --mom 0.9 --boot_factor 4 --balance 0 --delT 0 --data_dir data --min_val_acc 40 --cycling 0 > $PBS_O_WORKDIR/results/dbg0  &
+
+#CUDA_VISIBLE_DEVICES=1 python mud.py --train_kimg 8192 --uratio 7 --clrratio 7 --confidence 0.95 --wd 5e-4 --wu 2 --wclr 0 --batch 32 --lr 0.03 --temperature 0.5 --arch shake --filters 32 --scales 3 --repeat 4 --dataset=cifar10p.3@10-1 --train_dir experiments/ROSS/dbg_1 --augment d.d.d --mom 0.9 --boot_factor 4 --balance 4 --delT 0.2 --data_dir data --boot_schedule 1 --clrDataAug 0 > $PBS_O_WORKDIR/results/dbg_1  &
+
+#CUDA_VISIBLE_DEVICES=2 python mud.py --train_kimg 8192 --uratio 7 --clrratio 7 --confidence 0.95 --wd 5e-4 --wu 2 --wclr 0 --batch 32 --lr 0.03 --temperature 0.5 --arch shake --filters 32 --scales 3 --repeat 4 --dataset=cifar10p.3@10-1 --train_dir experiments/ROSS/dbg_2 --augment d.d.d --mom 0.9 --boot_factor 4 --balance 4 --delT 0.2 --data_dir data --boot_schedule 1 --clrDataAug 0 > $PBS_O_WORKDIR/results/dbg_2  &
+
+#CUDA_VISIBLE_DEVICES=3 python mud.py --train_kimg 8192 --uratio 7 --clrratio 7 --confidence 0.95 --wd 5e-4 --wu 2 --wclr 0 --batch 32 --lr 0.03 --temperature 0.5 --arch shake --filters 32 --scales 3 --repeat 4 --dataset=cifar10p.3@10-1 --train_dir experiments/ROSS/dbg_3 --augment d.d.d --mom 0.9 --boot_factor 4 --balance 4 --delT 0.2 --data_dir data --boot_schedule 1 --clrDataAug 0 > $PBS_O_WORKDIR/results/dbg_3  &
+
+#CUDA_VISIBLE_DEVICES=1 python mud.py --train_kimg 1024 --uratio 7 --clrratio 7 --confidence 0.95 --wd 5e-4 --wu 2 --wclr 0 --batch 64 --lr 0.03 --temperature 0.5 --arch shake --filters 32 --scales 3 --repeat 4 --dataset=cifar10.3@10-1 --train_dir experiments/ROSS/dbg_0101 --augment d.d.d --mom 0.9 --boot_factor 4 --balance 0 --delT 0 --data_dir data --boot_schedule 1 --clrDataAug 1 > $PBS_O_WORKDIR/results/dbg_1  &
+
+#CUDA_VISIBLE_DEVICES=2 python mud.py --train_kimg 1024 --uratio 7 --clrratio 7 --confidence 0.95 --wd 5e-4 --wu 2 --wclr 0 --batch 64 --lr 0.03 --temperature 0.5 --arch shake --filters 32 --scales 3 --repeat 4 --dataset=cifar10.3@10-1 --train_dir experiments/ROSS/dbg_1001 --augment d.d.d --mom 0.9 --boot_factor 4 --balance 0 --delT 0 --data_dir data --boot_schedule 1 --clrDataAug 1 > $PBS_O_WORKDIR/results/dbg_2  &
+
+#CUDA_VISIBLE_DEVICES=3 python mud.py --train_kimg 1024 --uratio 7 --clrratio 7 --confidence 0.95 --wd 5e-4 --wu 2 --wclr 0 --batch 64 --lr 0.03 --temperature 0.5 --arch shake --filters 32 --scales 3 --repeat 4 --dataset=cifar10.3@10-1 --train_dir experiments/ROSS/dbg_1101 --augment d.d.d --mom 0.9 --boot_factor 4 --balance 0 --delT 0 --data_dir data --boot_schedule 1 --clrDataAug 1 > $PBS_O_WORKDIR/results/dbg_3  &
+
+wait
+#rm -rf experiments/ROSS/dbg_0001 experiments/ROSS/dbg_1101
+#rm -rf experiments/ROSS/dbg_0101 experiments/ROSS/dbg_1001
+#rm -rf experiments/ROSS/dbg_1 experiments/ROSS/dbg_0
+#rm -rf experiments/ROSS/dbg_2 experiments/ROSS/dbg_3
+#rm -rf experiments/ROSS/debug0
+rm -rf experiments/ROSS/dbg0
+date
+#ls data/SSL2/
+exit
+
+echo "Output to folder frost"
+echo "stl10.1@100-1Iter1024U7CL4C0.95WD8e-4WU2Wclr1BS32LR0.06M0.9T1Ad.d.dB0D0BF4"
+CUDA_VISIBLE_DEVICES=0 python ross.py --train_kimg 1024 --uratio 6 --clrratio 4 --confidence 0.95 --wd 5e-4 --wu 1 --wclr 0 --batch 16 --lr 0.03 --temperature 1 --arch resnet --filters 32 --scales 3 --repeat 4 --dataset=stl10.2@10-1 --train_dir experiments/ROSS/dbg2 --augment d.d.d --mom 0.9 --boot_factor 0 --balance 0 --delT 0 --data_dir data > $PBS_O_WORKDIR/results/dbg2  &
+
+CUDA_VISIBLE_DEVICES=1 python ross.py --train_kimg 1024 --uratio 6 --clrratio 4 --confidence 0.95 --wd 5e-4 --wu 1 --wclr 0 --batch 16 --lr 0.03 --temperature 1 --arch resnet --filters 32 --scales 3 --repeat 4 --dataset=stl10.3@10-1 --train_dir experiments/ROSS/dbg1 --augment d.d.d --mom 0.9 --boot_factor 16 --balance 0 --delT 0 > $PBS_O_WORKDIR/results/dbg1 &
+
+CUDA_VISIBLE_DEVICES=2 python ross.py --train_kimg 1024 --uratio 6 --clrratio 4 --confidence 0.95 --wd 5e-4 --wu 1 --wclr 0 --batch 16 --lr 0.03 --temperature 1 --arch resnet --filters 32 --scales 3 --repeat 4 --dataset=stl10.4@10-1 --train_dir experiments/ROSS/dbg3 --augment d.d.d --mom 0.9 --boot_factor 16 --balance 0 --delT 0 > $PBS_O_WORKDIR/results/dbg3 &
+
+CUDA_VISIBLE_DEVICES=3 python ross.py --train_kimg 1024 --uratio 6 --clrratio 4 --confidence 0.95 --wd 5e-4 --wu 1 --wclr 0 --batch 16 --lr 0.03 --temperature 1 --arch resnet --filters 32 --scales 3 --repeat 4 --dataset=stl10.4@10-1 --train_dir experiments/ROSS/dbg4 --augment d.d.d --mom 0.9 --boot_factor 16 --balance 0 --delT 0 > $PBS_O_WORKDIR/results/dbg4 &
+
+wait
+rm -rf experiments/ROSS/dbg*
+date
+#ls data/SSL2/
+exit
+

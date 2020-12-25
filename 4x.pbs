@@ -1,0 +1,40 @@
+#!/bin/bash
+#PBS -l walltime=xTime:00:00
+#PBS -l select=1:ncpus=24:mpiprocs=24:ngpus=4:powerai=on
+#PBS -l place=scatter:excl
+#PBS -N xJob0
+#PBS -j oe
+#PBS -V
+#PBS -q standard
+#PBS -A MHPCC96650NRL
+
+module unload anaconda3/5.2.0
+module unload anaconda3/2019.07
+module load anaconda3/5.2.0
+module load anaconda3/2019.07
+module load tensorflow/1.14.0
+
+cd $PBS_O_WORKDIR
+export ML_DATA="./data"
+export PYTHONPATH=$PYTHONPATH:$PWD
+
+date
+#python --version
+echo "Output to folder xData0/xFolder0"
+echo "xData0.xSeed0@xSize0-xValid0xArch0IterxKimg0UxUratio0CxConf0WDxWd0WUxWu0BSxBatch0LRxLr0OAMxMom0AxAug0BxBal0DxDelt0BFxBoot0VxValacc0CYxCycle0"
+CUDA_VISIBLE_DEVICES=0 python pla.py --train_kimg xKimg0 --uratio xUratio0 --confidence xConf0 --wd xWd0 --wu xWu0 --batch xBatch0 --lr xLr0 --arch xArch0 --filters 32 --scales 3 --repeat 4 --dataset=xData0.xSeed0@xSize0-xValid0 --train_dir experiments/PLA/xFolder0xData0.xSeed0@xSize0-xValid0xArch0IterxKimg0UxUratio0CxConf0WDxWd0WUxWu0BSxBatch0LRxLr0MxMom0AxAug0BxBal0DxDelt0BFxBoot0VxValacc0CYxCycle0_0 --augment xAug0 --mom xMom0 --boot_factor xBoot0 --balance xBal0 --delT xDelt0 --min_val_acc xValacc0 --cycling xCycle0 > $PBS_O_WORKDIR/results/xData0/xFolder0/xData0.xSeed0@xSize0-xValid0xArch0IterxKimg0UxUratio0CxConf0WDxWd0WUxWu0BSxBatch0LRxLr0MxMom0AxAug0BxBal0DxDelt0BFxBoot0VxValacc0CYxCycle0_0 &
+
+CUDA_VISIBLE_DEVICES=1 python pla.py --train_kimg xKimg0 --uratio xUratio0 --confidence xConf0 --wd xWd0 --wu xWu0 --batch xBatch0 --lr xLr0 --arch xArch0 --filters 32 --scales 3 --repeat 4 --dataset=xData0.xSeed0@xSize0-xValid0 --train_dir experiments/PLA/xFolder0xData0.xSeed0@xSize0-xValid0xArch0IterxKimg0UxUratio0CxConf0WDxWd0WUxWu0BSxBatch0LRxLr0MxMom0AxAug0BxBal0DxDelt0BFxBoot0VxValacc0CYxCycle0_1 --augment xAug0 --mom xMom0 --boot_factor xBoot0 --balance xBal0 --delT xDelt0 --min_val_acc xValacc0 --cycling xCycle0 > $PBS_O_WORKDIR/results/xData0/xFolder0/xData0.xSeed0@xSize0-xValid0xArch0IterxKimg0UxUratio0CxConf0WDxWd0WUxWu0BSxBatch0LRxLr0MxMom0AxAug0BxBal0DxDelt0BFxBoot0VxValacc0CYxCycle0_1 &
+
+CUDA_VISIBLE_DEVICES=2 python pla.py --train_kimg xKimg0 --uratio xUratio0 --confidence xConf0 --wd xWd0 --wu xWu0 --batch xBatch0 --lr xLr0 --arch xArch0 --filters 32 --scales 3 --repeat 4 --dataset=xData0.xSeed0@xSize0-xValid0 --train_dir experiments/PLA/xFolder0xData0.xSeed0@xSize0-xValid0xArch0IterxKimg0UxUratio0CxConf0WDxWd0WUxWu0BSxBatch0LRxLr0MxMom0AxAug0BxBal0DxDelt0BFxBoot0VxValacc0CYxCycle0_2 --augment xAug0 --mom xMom0 --boot_factor xBoot0 --balance xBal0 --delT xDelt0 --min_val_acc xValacc0 --cycling xCycle0 > $PBS_O_WORKDIR/results/xData0/xFolder0/xData0.xSeed0@xSize0-xValid0xArch0IterxKimg0UxUratio0CxConf0WDxWd0WUxWu0BSxBatch0LRxLr0MxMom0AxAug0BxBal0DxDelt0BFxBoot0VxValacc0CYxCycle0_2 &
+
+CUDA_VISIBLE_DEVICES=3 python pla.py --train_kimg xKimg0 --uratio xUratio0 --confidence xConf0 --wd xWd0 --wu xWu0 --batch xBatch0 --lr xLr0 --arch xArch0 --filters 32 --scales 3 --repeat 4 --dataset=xData0.xSeed0@xSize0-xValid0 --train_dir experiments/PLA/xFolder0xData0.xSeed0@xSize0-xValid0xArch0IterxKimg0UxUratio0CxConf0WDxWd0WUxWu0BSxBatch0LRxLr0MxMom0AxAug0BxBal0DxDelt0BFxBoot0VxValacc0CYxCycle0_3 --augment xAug0 --mom xMom0 --boot_factor xBoot0 --balance xBal0 --delT xDelt0 --min_val_acc xValacc0 --cycling xCycle0 > $PBS_O_WORKDIR/results/xData0/xFolder0/xData0.xSeed0@xSize0-xValid0xArch0IterxKimg0UxUratio0CxConf0WDxWd0WUxWu0BSxBatch0LRxLr0MxMom0AxAug0BxBal0DxDelt0BFxBoot0VxValacc0CYxCycle0_3 &
+
+
+wait
+rm -rf experiments/PLA/xFolder0xData0.xSeed0@xSize0-xValid0xArch0IterxKimg0UxUratio0CxConf0WDxWd0WUxWu0BSxBatch0LRxLr0MxMom0AxAug0BxBal0DxDelt0BFxBoot0VxValacc0CYxCycle0_*
+
+date
+#ls data/SSL2/
+exit
+
