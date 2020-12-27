@@ -163,12 +163,11 @@ class CTAClassifySemi(ClassifySemi):
             accuracies.append((pred == labels).mean() * 100)
 #####  New Code 
             if verbose and  subset == 'valid':
-                print("Val acc ", accuracies[1])
                 val_class_acc = []
                 for c in range(self.nclass):
                     mask = (labels == c)
                     val_class_acc.append((pred[mask] == c).mean() *100)
-                print("validation set class accuracies ", val_class_acc)
+                print("Validation set class accuracies ",accuracies[1],  val_class_acc)
 #                if accuracies[1] > FLAGS.min_val_acc and not self.boot:
                 if min(val_class_acc) > FLAGS.min_val_acc and not self.boot:
                     currentSize = int(FLAGS.boot_factor * self.origSize)
@@ -183,6 +182,12 @@ class CTAClassifySemi(ClassifySemi):
                         print("Sample Cycling at epoch ", epochs, "  currentSize = ", currentSize)
                         self.bootstrap(currentSize)
                         FLAGS.boot_flag = True
+            elif verbose and  subset == 'test':
+                test_class_acc = []
+                for c in range(self.nclass):
+                    mask = (labels == c)
+                    test_class_acc.append((pred[mask] == c).mean() *100)
+                print("Test set class accuracies ",accuracies[1],  test_class_acc)
 
         testAcc = float(accuracies[2])
         if testAcc  > self.best_acc:
@@ -198,7 +203,7 @@ class CTAClassifySemi(ClassifySemi):
             for item in accuracies:
                 acc.append(item) 
             acc.append(self.best_acc)
-            print(acc)
+#            print(acc)
             tup = tuple(acc)
 #            self.train_print('Epochs %d, kimg %-5d accuracy train/valid/test/best_test  %.2f  %.2f  %.2f  %.2f  ' % tup)
             self.train_print('Epochs %d, kimg %-5d lr %.3f  accuracy train/valid/test/best_test  %.2f  %.2f  %.2f  %.2f  ' % tup)
