@@ -306,7 +306,7 @@ def create_datasets(augment_fn):
                                parse_fn=record_parse_mnist)
               for seed, label, valid in itertools.product(range(6), [10 * x for x in SAMPLES_PER_CLASS], [1, 5000])])
     d.update([DataSets.creator('stl10', seed, label, valid, augment_fn, height=96, width=96)
-              for seed, label, valid in itertools.product(range(6), [10, 160, 2560, 1000, 5000], [1, 500])])
+              for seed, label, valid in itertools.product(range(6), [10, 40, 160, 2560, 1000, 5000], [1, 100, 500])])
     d.update([DataSets.creator('svhn', seed, label, valid, augment_fn)
               for seed, label, valid in itertools.product(range(6), [10 * x for x in SAMPLES_PER_CLASS], [1, 5000])])
     d.update([DataSets.creator('svhn_noextra', seed, label, valid, augment_fn)

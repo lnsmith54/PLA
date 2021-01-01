@@ -172,7 +172,7 @@ class CTAClassifySemi(ClassifySemi):
                 if min(val_class_acc) > FLAGS.min_val_acc and not self.boot:
                     currentSize = int(FLAGS.boot_factor * self.origSize)
                     print("First bootstrap episode: currentSize = ", currentSize)
-                    self.bootstrap(currentSize)
+                    self.bootstrap(currentSize, val_class_acc)
                     self.boot = True
                     FLAGS.boot_flag = True
 #                    self.kwargs['lr'] = FLAGS.lr2
@@ -180,7 +180,7 @@ class CTAClassifySemi(ClassifySemi):
                     if epochs % FLAGS.cycling == 0:
                         currentSize = int(FLAGS.boot_factor * self.origSize)
                         print("Sample Cycling at epoch ", epochs, "  currentSize = ", currentSize)
-                        self.bootstrap(currentSize)
+                        self.bootstrap(currentSize, val_class_acc)
                         FLAGS.boot_flag = True
             elif verbose and  subset == 'test':
                 test_class_acc = []
@@ -225,7 +225,7 @@ class CTAClassifySemi(ClassifySemi):
         #    print("Random string of length", length, "is:", result_str)
         return result_str
 
-    def bootstrap(self, currentSize ):
+    def bootstrap(self, currentSize, val_class_acc):
         """Output the highest confidence pseudo-labeled examples."""
 
         # Read in the original labeled data sample numbers
@@ -241,13 +241,15 @@ class CTAClassifySemi(ClassifySemi):
 
         batch = FLAGS.batch # len(labels)//10
         predicted = []
-        for x in range(0, images.shape[0], batch):
+        count = images.shape[0]
+        for x in range(0, count, batch):
             p = self.session.run(
                 classify_op,
                 feed_dict={
                     self.ops.x: images[x:x + batch]
                 })
             predicted.append(p)
+        del images
         predicted = np.concatenate(predicted, axis=0)
         preds = predicted.argmax(1)
         probs = predicted.max(1)
@@ -260,9 +262,11 @@ class CTAClassifySemi(ClassifySemi):
         numPerClass = currentSize // self.nclass
         sortByClass = np.random.randint(0,high=len(labels), size=(self.nclass, numPerClass), dtype=int)
         indx = np.zeros([self.nclass], dtype=int)
-        matches = np.zeros([self.nclass, numPerClass], dtype=int)
+        perClass = numPerClass * np.ones([self.nclass], dtype=int)
+#        matches = np.zeros([self.nclass, numPerClass], dtype=int)
+        matches = []
         labls  = preds[top]
-        samples = top
+#        samples = top
         trainLabelAcc = 0
 #        print("number of samples ", len(top))
 #        print("labls",labls[:100])
@@ -270,26 +274,58 @@ class CTAClassifySemi(ClassifySemi):
 #        print("pseudo-labels",preds[top[:100]])
 #        print("probs",probs[top[:100]])
 #        print("samples", top[:100])
+        samples = []
+        pseudo_labels = []
         for i in origSamples['label']:
-            y = labels[i]
-            sortByClass[y, indx[y]] = i
-            matches[y, indx[y]] = 1
-            if preds[i] == y:
+            pseudo_labels.append(labels[i])
+            samples.append(i)
+            matches.append(1)
+            if preds[i] == labels[i]:
                 trainLabelAcc += 1
-            indx[y] += 1
+            indx[labels[i]] += 1
         trainLabelAcc = 100 * trainLabelAcc / len(origSamples['label'])
+        if FLAGS.imbalance > 0:
+            # mean val class accuracy
+            valAcc = statistics.mean(val_class_acc)
+            # Norm by FLAGS.imbalance*(currentSize - origSize)/ self.nclass
+            norm = FLAGS.imbalance*(currentSize - self.origSize)/ self.nclass
+            # for each class: mean - class
+            adjust = np.zeros([self.nclass], dtype=float)
+            for i in range(self.nclass):
+                adjust[i] = valAcc - val_class_acc[i]
+            norm = norm/np.amax(np.absolute(adjust))
+#            print("adjust, norm, valAcc, val_class_acc ", adjust, norm, valAcc, val_class_acc)
+            # Adjust perClass, and make neg = pos
+            sumAdj = 0
+            for i in range(self.nclass):
+                perClass[i] += np.rint(adjust[i]*norm)
+                sumAdj += np.rint(adjust[i]*norm)
+#            print("Number of pseudo labels in each class ", perClass, " adjustment sum ",sumAdj)
+            for i in range(int(np.absolute(sumAdj))):
+                perClass[i] -= np.sign(sumAdj)
+            print("Number of pseudo labels in each class ", perClass, " adjustment sum ",sumAdj)
+
         for i in range(len(top)):
-            if indx[labls[i]] < numPerClass:
-                sortByClass[labls[i], indx[labls[i]]] = samples[i]
+            if indx[labls[i]] < perClass[labls[i]]:
+                pseudo_labels.append(labls[i])
+                samples.append(top[i])
 #                print(i, labls[i], labels[top[i]],indx[labls[i]])
                 if labls[i] == labels[top[i]]:
-                    matches[labls[i], indx[labls[i]]] = 1
+                    matches.append(1)
+                else:
+                    matches.append(0)
                 indx[labls[i]] += 1
+        if len(samples) < currentSize:
+            for i in range(len(samples)+1,currentSize):
+                pseudo_labels.append(labls[i])
+                samples.append(top[i])
+        label = frozenset([int(x) for x in samples])
+#        print("pseudo labeled samples ",samples)
 
         if min(indx) < numPerClass:
             print("Counts of at least one class ", indx, " is lower than ", numPerClass)
 #        print("SortByClass = ", sortByClass)
-        print("matches",matches[:self.nclass, :numPerClass])
+        print("matches",matches, " Pseudo-labeling accuracy ", 100.0*sum(matches)/len(matches))
 
         # Set up new dataset in a random folder
         datasetName = self.dataset.name[:self.dataset.name.find('.')]
@@ -311,17 +347,17 @@ class CTAClassifySemi(ClassifySemi):
         target = '%s/%s/%s' % (data.DATA_DIR, FLAGS.data_subfolder, target)
         if tf.gfile.Exists(target):
             prevSortByClass = np.load(target)
-            count = 0
+            cnt = 0
             for j in range(self.origSize+1,numPerClass):
                 for i in range(self.nclass):
                     if prevSortByClass[i,j] in sortByClass:
-                        count += 1
-            repeats = count/( (numPerClass-self.origSize)*self.nclass)
+                        cnt += 1
+            repeats = cnt/( (numPerClass-self.origSize)*self.nclass)
             print("Percentage of repeat pseudo-labeled samples ", repeats)
         print("Saving ", target)
         np.save(target, sortByClass[0:self.nclass, :numPerClass])
 
-        classAcc = 100*np.sum(matches, axis=1)/numPerClass
+        classAcc = 100*np.sum(matches, axis=0)/numPerClass
         print("Accuracy of the predicted pseudo-labels: top ", numPerClass,  ", ", np.mean(classAcc), classAcc )
 
         input_file=data.DATA_DIR+'/'+datasetName+'-train.tfrecord'
@@ -330,54 +366,6 @@ class CTAClassifySemi(ClassifySemi):
         if tf.gfile.Exists(target + '-label.tfrecord'): 
             tf.io.gfile.remove(target + '-label.tfrecord')
             tf.io.gfile.remove(target + '-label.json')
-
-        count = 0
-        id_class = []
-        class_id = defaultdict(list)
-#        print('Computing class distribution')
-        dataset = tf.data.TFRecordDataset(input_file).map(self.get_class, 4).batch(1 << 10)
-        it = dataset.make_one_shot_iterator().get_next()
-        try:
-            with tf.Session() as session:
-                while 1:
-#                    old_count = count
-                    for i in session.run(it):
-                        id_class.append(i)
-                        class_id[i].append(count)
-                        count += 1
-#                    t.update(count - old_count)
-        except tf.errors.OutOfRangeError:
-            pass
-#        print('%d records found' % count)
-        nclass = len(class_id)
-        assert min(class_id.keys()) == 0 and max(class_id.keys()) == (nclass - 1)
-        train_stats = np.array([len(class_id[i]) for i in range(nclass)], np.float64)
-        train_stats /= train_stats.max()
-        if 'stl10' in self.train_dir:
-            # All of the unlabeled data is given label 0, but we know that
-            # STL has equally distributed data among the 10 classes.
-            train_stats[:] = 1
-
-#        print('  Stats', ' '.join(['%.2f' % (100 * x) for x in train_stats]))
-        assert min(class_id.keys()) == 0 and max(class_id.keys()) == (nclass - 1)
-        class_id = [np.array(class_id[i], dtype=np.int64) for i in range(nclass)]
-
-        # Distribute labels to match the input distribution.
-        train_data = sortByClass[0:self.nclass, :numPerClass]
-        samples = []
-        pseudo_labels = []
-        for i in range(currentSize):
-            c = i%nclass
-            npos = i//nclass
-            pseudo_labels.append(c)
-            samples.append(train_data[c][npos])
-#            print("Label ",id_class[train_data[c][npos]]," Pseudo-label ", c, " Top confidence ", npos, " train_data ", train_data[c][npos])
-
-        del train_data, it, dataset
-        label = frozenset([int(x) for x in samples])
-        if 'stl10' in self.train_dir and currentSize == 1000:
-            train_data = tf.gfile.Open(os.path.join(data.DATA_DIR, 'stl10_fold_indices.txt'), 'r').read()
-            label = frozenset(list(map(int, data.split('\n')[seed].split())))
 
         tf.gfile.MakeDirs(os.path.dirname(target))
         with tf.python_io.TFRecordWriter(target + '-label.tfrecord') as writer_label:
@@ -394,6 +382,8 @@ class CTAClassifySemi(ClassifySemi):
                 loop.update()
             loop.close()
         with tf.gfile.Open(target + '-label.json', 'w') as writer:
+            train_stats = np.array(perClass, np.float64)
+            train_stats /= train_stats.max()
             writer.write(json.dumps(dict(distribution=train_stats.tolist(), label=sorted(label)), indent=2, sort_keys=True))
         return
 
@@ -441,6 +431,38 @@ class CTAClassifySemi(ClassifySemi):
         return pseudo_mask 
 
 ###################### End
+'''
+        count = 0
+        id_class = []
+        class_id = defaultdict(list)
+#        print('Computing class distribution')
+        dataset = tf.data.TFRecordDataset(input_file).map(self.get_class, 4).batch(1 << 10)
+        it = dataset.make_one_shot_iterator().get_next()
+        try:
+            with tf.Session() as session:
+                while 1:
+#                    old_count = count
+                    for i in session.run(it):
+                        id_class.append(i)
+                        class_id[i].append(count)
+                        count += 1
+#                    t.update(count - old_count)
+        except tf.errors.OutOfRangeError:
+            pass
+#        print('%d records found' % count)
+        nclass = len(class_id)
+        assert min(class_id.keys()) == 0 and max(class_id.keys()) == (nclass - 1)
+        train_stats = np.array([len(class_id[i]) for i in range(nclass)], np.float64)
+        train_stats /= train_stats.max()
+        if 'stl10' in self.train_dir:
+            # All of the unlabeled data is given label 0, but we know that
+            # STL has equally distributed data among the 10 classes.
+            train_stats[:] = 1
+
+#        print('  Stats', ' '.join(['%.2f' % (100 * x) for x in train_stats]))
+        assert min(class_id.keys()) == 0 and max(class_id.keys()) == (nclass - 1)
+        class_id = [np.array(class_id[i], dtype=np.int64) for i in range(nclass)]
+'''
 
 ##### End of new code
 

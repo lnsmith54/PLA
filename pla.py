@@ -221,6 +221,7 @@ if __name__ == '__main__':
     flags.DEFINE_float('mom', 0.9, 'Momentum coefficient.')
     flags.DEFINE_float('delT', 0.2, 'The amount balance=1 can reduce the confidence threshold.')
     flags.DEFINE_float('min_val_acc', 50, 'The validation set accuracy to trigger bootstrapping.')
+    flags.DEFINE_float('imbalance', 0.0, 'Indicator on imbalancing pseudo-labels for weaker classes.')
     flags.DEFINE_integer('filters', 32, 'Filter size of convolutions.')
     flags.DEFINE_integer('repeat', 4, 'Number of residual layers per stage.')
     flags.DEFINE_integer('scales', 0, 'Number of 2x2 downscalings in the classifier.')
