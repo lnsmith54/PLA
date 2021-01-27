@@ -109,7 +109,7 @@ class PLA(CTAReMixMatch):
 
 #        lrate = tf.clip_by_value(tf.to_float(self.step) / (FLAGS.train_kimg << 10), 0, 1)
 #        lr *= tf.cos(lrate * (7 * np.pi) / (2 * 8))
-        lrate = tf.clip_by_value(1.5*tf.to_float(self.step) / (FLAGS.train_kimg << 10), 0, 1.5) - 0.5
+        lrate = tf.clip_by_value((1.0+FLAGS.warmstart)*tf.to_float(self.step) / (FLAGS.train_kimg << 10), 0, 1.5) - FLAGS.warmstart
         lr *= tf.cos(lrate * (0.4965 * np.pi) )
         tf.summary.scalar('monitors/lr', lr)
 
@@ -222,6 +222,7 @@ if __name__ == '__main__':
     flags.DEFINE_float('delT', 0.2, 'The amount balance=1 can reduce the confidence threshold.')
     flags.DEFINE_float('min_val_acc', 50, 'The validation set accuracy to trigger bootstrapping.')
     flags.DEFINE_float('imbalance', 0.0, 'Indicator on imbalancing pseudo-labels for weaker classes.')
+    flags.DEFINE_float('warmstart', 0.5, 'LR Warmstart: 0 = no warmstart, 0.5 = warmstart.')
     flags.DEFINE_integer('filters', 32, 'Filter size of convolutions.')
     flags.DEFINE_integer('repeat', 4, 'Number of residual layers per stage.')
     flags.DEFINE_integer('scales', 0, 'Number of 2x2 downscalings in the classifier.')
